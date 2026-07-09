@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GroupGenius AI - Random Group Generator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- CDNs for libraries -->
+    <!-- SheetJS (Excel Parsing & Writing) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- PDF.js (PDF Reading) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <!-- Tesseract.js (Image OCR) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+    <!-- jsPDF (PDF Generation) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF-AutoTable (PDF Tables) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Canvas Confetti (Celebrations) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon"><i data-lucide="sparkles"></i></span>
+                    <span class="logo-text">GroupGenius <span class="logo-accent">AI</span></span>
+                </div>
+            </div>
+            
+            <nav class="nav-steps">
+                <div class="nav-step active" id="step-nav-upload">
+                    <div class="step-num">1</div>
+                    <div class="step-details">
+                        <span class="step-title">Upload List</span>
+                        <span class="step-desc">Excel, PDF, or JPG</span>
+                    </div>
+                </div>
+                <div class="nav-step" id="step-nav-review">
+                    <div class="step-num">2</div>
+                    <div class="step-details">
+                        <span class="step-title">Review Data</span>
+                        <span class="step-desc">Edit student details</span>
+                    </div>
+                </div>
+                <div class="nav-step" id="step-nav-config">
+                    <div class="step-num">3</div>
+                    <div class="step-details">
+                        <span class="step-title">Configure</span>
+                        <span class="step-desc">Sizes & balance</span>
+                    </div>
+                </div>
+                <div class="nav-step" id="step-nav-theater">
+                    <div class="step-num">4</div>
+                    <div class="step-details">
+                        <span class="step-title">Live Generation</span>
+                        <span class="step-desc">Interactive draw</span>
+                    </div>
+                </div>
+                <div class="nav-step" id="step-nav-results">
+                    <div class="step-num">5</div>
+                    <div class="step-details">
+                        <span class="step-title">Export & Done</span>
+                        <span class="step-desc">Save PDF / Excel</span>
+                    </div>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="class-summary">
+                    <div class="summary-title">Active Roster</div>
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <span class="stat-val" id="summary-total">0</span>
+                            <span class="stat-lbl">Students</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val" id="summary-boys">0</span>
+                            <span class="stat-lbl">Boys</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val" id="summary-girls">0</span>
+                            <span class="stat-lbl">Girls</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="copyright">©️2026 All Right Reversed</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- HEADER -->
+            <header class="top-header">
+                <h1 id="page-title">Random Group Generator</h1>
+                <div class="header-actions">
+                    <button class="theme-toggleBtn" id="sound-toggle" title="Toggle Sound FX">
+                        <i data-lucide="volume-2" id="sound-icon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- VIEW 1: UPLOAD & IMPORT -->
+            <section class="content-view active" id="view-upload">
+                <div class="card glass-card upload-hero">
+                    <div class="card-body">
+                        <h2>Import Student Roster</h2>
+                        <p class="subtitle">Upload your class attendance sheet, roster spreadsheet, or a photo of student names. Our AI parser will extract the data automatically.</p>
+                        
+                        <div class="dropzone" id="drop-zone">
+                            <input type="file" id="file-input" accept=".xlsx,.xls,.pdf,.jpg,.jpeg,.png" style="display: none;">
+                            <div class="dropzone-content">
+                                <div class="dropzone-icon">
+                                    <i data-lucide="cloud-upload"></i>
+                                </div>
+                                <h3>Drag & drop your file here</h3>
+                                <p>Supports Excel (.xlsx, .xls), PDF attendance sheet (.pdf), or Image (.jpg, .jpeg, .png)</p>
+                                <span class="divider-text">or</span>
+                                <button class="btn btn-primary" id="btn-browse">Browse Files</button>
+                            </div>
+                        </div>
+
+                        <!-- Processing State -->
+                        <div class="processing-overlay hidden" id="processing-loader">
+                            <div class="spinner"></div>
+                            <h3 id="loader-title">Parsing Document...</h3>
+                            <p id="loader-desc">Extracting names and registration numbers using smart heuristics.</p>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="loader-progress" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Parsing Sample Info -->
+                        <div class="formats-info-grid">
+                            <div class="format-card">
+                                <div class="format-icon excel-color"><i data-lucide="file-spreadsheet"></i></div>
+                                <h4>Excel Sheet</h4>
+                                <p>Reads rows for Names and Reg Numbers. Works with multiple columns.</p>
+                            </div>
+                            <div class="format-card">
+                                <div class="format-icon pdf-color"><i data-lucide="file-text"></i></div>
+                                <h4>PDF Sheet</h4>
+                                <p>Extracts text tables and lists. Perfect for downloaded reports.</p>
+                            </div>
+                            <div class="format-card">
+                                <div class="format-icon img-color"><i data-lucide="image"></i></div>
+                                <h4>JPG / PNG Photo</h4>
+                                <p>Runs local Tesseract OCR to scan names from printed sheets or whiteboard photos.</p>
+                            </div>
+                        </div>
+
+                        <div class="manual-input-container">
+                            <div class="accordion-header" id="toggle-manual-input">
+                                <span><i data-lucide="keyboard"></i> Or Paste Names Manually</span>
+                                <i data-lucide="chevron-down" class="accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-body hidden" id="manual-input-body">
+                                <p class="input-instructions">Enter each student on a new line. You can write: <code>Name, RegNumber, Gender(M/F)</code>. Or just paste raw names.</p>
+                                <textarea id="manual-textarea" placeholder="Example:&#10;Muhammad Ubaid, 1250100517, Boy&#10;Ali Rizvi, 1250100915, Boy&#10;Sarah Khan, 1250100222, Girl&#10;Ayesha Ahmed, Girl"></textarea>
+                                <div class="action-bar-right">
+                                    <button class="btn btn-secondary" id="btn-load-sample">Load Sample Class (50 Students)</button>
+                                    <button class="btn btn-primary" id="btn-parse-manual">Import Text</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 2: REVIEW & EDIT -->
+            <section class="content-view" id="view-review">
+                <div class="card glass-card">
+                    <div class="card-header justify-between">
+                        <div>
+                            <h2>Review & Verify Student Roster</h2>
+                            <p class="subtitle">Please check the parsed list, assign genders for grouping balance, or make manual corrections.</p>
+                        </div>
+                        <div class="header-buttons">
+                            <button class="btn btn-secondary btn-icon-only" id="btn-add-student" title="Add Student"><i data-lucide="plus"></i> Add Student</button>
+                            <button class="btn btn-danger btn-icon-only" id="btn-clear-roster" title="Clear All"><i data-lucide="trash-2"></i> Clear</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bulk-tools-panel">
+                        <div class="bulk-title"><i data-lucide="wrench"></i> Bulk Actions:</div>
+                        <div class="bulk-actions">
+                            <button class="btn btn-sm btn-secondary" id="btn-bulk-boys">Set All as Boys</button>
+                            <button class="btn btn-sm btn-secondary" id="btn-bulk-girls">Set All as Girls</button>
+                            <button class="btn btn-sm btn-secondary" id="btn-bulk-detect-gender">Auto-Detect Genders</button>
+                        </div>
+                        <div class="roster-stats-badge">
+                            <span id="badge-total">0 Students</span> | 
+                            <span id="badge-boys">0 Boys</span> | 
+                            <span id="badge-girls">0 Girls</span>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="roster-table" id="roster-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">S.No.</th>
+                                    <th>Student Name</th>
+                                    <th>Registration Number</th>
+                                    <th style="width: 180px;">Gender</th>
+                                    <th style="width: 100px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roster-table-body">
+                                <!-- Dynamically filled -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="action-footer">
+                        <button class="btn btn-secondary" id="btn-back-to-upload"><i data-lucide="arrow-left"></i> Re-Upload</button>
+                        <button class="btn btn-accent" id="btn-proceed-to-config">Configure Groups <i data-lucide="arrow-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 3: CONFIGURATION -->
+            <section class="content-view" id="view-config">
+                <div class="config-grid">
+                    <div class="card glass-card config-card-main">
+                        <h2>Configure Grouping Parameters</h2>
+                        <p class="subtitle">Set up the parameters for your semester final project groups.</p>
+                        
+                        <div class="form-group">
+                            <label for="input-subject-name" class="form-label">Subject Name</label>
+                            <input type="text" id="input-subject-name" placeholder="e.g. Object Oriented Programming, DBMS..." class="roster-input" style="padding: 12px 16px; font-size: 15px;">
+                        </div>
+
+                        <div class="two-col-inputs">
+                            <div class="form-group">
+                                <label for="input-department" class="form-label">Department</label>
+                                <input type="text" id="input-department" placeholder="e.g. CS, SE, IT, EE..." class="roster-input" style="padding: 12px 16px; font-size: 15px;">
+                            </div>
+                            <div class="form-group">
+                                <label for="input-semester" class="form-label">Semester</label>
+                                <input type="text" id="input-semester" placeholder="e.g. 2nd, 4th, Fall 2025..." class="roster-input" style="padding: 12px 16px; font-size: 15px;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Grouping Purpose</label>
+                            <div class="purpose-selection-grid">
+                                <div class="purpose-card active" id="purpose-card-presentation">
+                                    <div class="purpose-card-content">
+                                        <div class="purpose-icon"><i data-lucide="presentation"></i></div>
+                                        <div class="purpose-details">
+                                            <h4>Presentation Groups</h4>
+                                            <p>Generate teams for project presentations and speeches.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="purpose-card" id="purpose-card-project">
+                                    <div class="purpose-card-content">
+                                        <div class="purpose-icon"><i data-lucide="folder-git-2"></i></div>
+                                        <div class="purpose-details">
+                                            <h4>Project Groups</h4>
+                                            <p>Generate teams for semester-long final projects.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="group-size-range" class="form-label">
+                                <span>Students per Group</span>
+                                <span class="highlight-val" id="group-size-val">5</span>
+                            </label>
+                            <div class="range-slider-wrapper">
+                                <span class="range-min">2</span>
+                                <input type="range" id="group-size-range" min="2" max="10" value="5" class="range-slider">
+                                <span class="range-max">10</span>
+                            </div>
+                            <div class="slider-ticks">
+                                <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                            </div>
+                        </div>
+
+                        <!-- Gender Mode Selection -->
+                        <div class="form-group">
+                            <label class="form-label">Grouping Mode</label>
+                            <div class="purpose-selection-grid">
+                                <div class="purpose-card active" id="gender-card-mixed">
+                                    <div class="purpose-card-content">
+                                        <div class="purpose-icon gender-mixed-icon"><i data-lucide="shuffle"></i></div>
+                                        <div class="purpose-details">
+                                            <h4>Boys &amp; Girls Mixed</h4>
+                                            <p>Each group gets both boys and girls evenly distributed.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="purpose-card" id="gender-card-separate">
+                                    <div class="purpose-card-content">
+                                        <div class="purpose-icon gender-sep-icon"><i data-lucide="split"></i></div>
+                                        <div class="purpose-details">
+                                            <h4>Boys &amp; Girls Separate</h4>
+                                            <p>Boys form their own groups, girls form their own groups.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Theater Mode toggle only -->
+                        <div class="toggle-options-grid">
+                            <div class="toggle-card active" id="toggle-card-theater">
+                                <div class="toggle-header">
+                                    <div class="toggle-icon"><i data-lucide="play-circle"></i></div>
+                                    <div class="toggle-details">
+                                        <h4>Interactive Theater Mode</h4>
+                                        <p>Watch student names roll in real-time like a digital raffle.</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="chk-theater-mode" checked>
+                                        <span class="slider round"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Existing Group Name -->
+                        <div class="form-group">
+                            <label for="input-existing-group" class="form-label">
+                                Existing Class / Section Name <span style="font-weight:400;color:var(--text-muted);font-size:12px;">(optional)</span>
+                            </label>
+                            <input type="text" id="input-existing-group" placeholder="e.g. Section A, BSCS-2A, Group Alpha..." class="roster-input" style="padding: 12px 16px; font-size: 15px;">
+                        </div>
+
+                        <div class="config-summary-box">
+                            <div class="summary-icon"><i data-lucide="info"></i></div>
+                            <div class="summary-text" id="config-summary-text">
+                                Loading configurations...
+                            </div>
+                        </div>
+
+                        <div class="action-footer mt-4">
+                            <button class="btn btn-secondary" id="btn-back-to-review"><i data-lucide="arrow-left"></i> Edit Roster</button>
+                            <button class="btn btn-accent btn-lg" id="btn-launch-generator">Generate Groups <i data-lucide="sparkles"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Visual Preview of Groups -->
+                    <div class="card glass-card config-sidebar-preview">
+                        <h3>Simulated Layout</h3>
+                        <p class="subtitle">Based on your parameters, the groups will be structured as follows:</p>
+                        
+                        <div class="preview-stats-container">
+                            <div class="preview-stat">
+                                <span class="preview-stat-num" id="prev-num-groups">10</span>
+                                <span class="preview-stat-lbl">Total Groups</span>
+                            </div>
+                            <div class="preview-stat">
+                                <span class="preview-stat-num" id="prev-avg-size">5</span>
+                                <span class="preview-stat-lbl">Avg. Group Size</span>
+                            </div>
+                        </div>
+
+                        <div class="visual-groups-grid" id="visual-groups-preview">
+                            <!-- Dynamically loaded preview cards -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 4: INTERACTIVE THEATER -->
+            <section class="content-view" id="view-theater">
+                <div class="theater-layout">
+                    <!-- Left: Generation Board -->
+                    <div class="theater-board">
+                        <div class="theater-header-panel">
+                            <div>
+                                <span class="theater-badge">LIVE RAFFLE</span>
+                                <h2 id="theater-group-title">Group 1 — Ready to Draw</h2>
+                            </div>
+                            <div class="theater-timer-speed">
+                                <label for="speed-range">Speed:</label>
+                                <input type="range" id="speed-range" min="1" max="4" value="2" class="speed-slider-control">
+                                <span id="speed-val-label">Normal</span>
+                            </div>
+                        </div>
+
+                        <!-- Draw stage: single animation box + members list below -->
+                        <div class="theater-stage" id="theater-stage">
+                            <div class="draw-box-wrapper" id="draw-box-wrapper">
+                                <!-- Single draw animation box -->
+                            </div>
+                            <div class="group-members-panel" id="group-members-panel">
+                                <div class="group-members-heading">Group Members</div>
+                                <div class="group-members-list" id="group-members-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- Visual controls -->
+                        <div class="theater-controls">
+                            <button class="btn btn-secondary btn-lg" id="btn-skip-anim"><i data-lucide="fast-forward"></i> Skip Animation</button>
+                            <button class="btn btn-accent btn-lg" id="btn-play-group"><i data-lucide="play"></i> Draw Group</button>
+                            <div class="autoplay-toggle-wrapper">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-autoplay">
+                                    <span class="checkmark"></span>
+                                    Autoplay Groups
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="animation-stage-overlay hidden" id="celebration-screen">
+                            <div class="celebration-content">
+                                <div class="trophy-pulse"><i data-lucide="award"></i></div>
+                                <h2>All Groups Successfully Created!</h2>
+                                <p>All students have been assigned to projects.</p>
+                                <button class="btn btn-accent btn-lg mt-4" id="btn-theater-to-results">View Final Groups <i data-lucide="arrow-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Live Roster & Progress -->
+                    <div class="theater-sidebar">
+                        <div class="theater-tab-header">
+                            <button class="tab-btn active" id="tab-btn-remaining">Remaining (<span id="count-remaining">50</span>)</button>
+                            <button class="tab-btn" id="tab-btn-formed">Formed (<span id="count-formed">0</span>)</button>
+                        </div>
+                        
+                        <div class="theater-tab-body">
+                            <!-- Remaining Students list -->
+                            <div class="tab-content" id="tab-content-remaining">
+                                <div class="remaining-list" id="theater-remaining-list">
+                                    <!-- Dynamic list of student badges -->
+                                </div>
+                            </div>
+                            
+                            <!-- Formed Groups List -->
+                            <div class="tab-content hidden" id="tab-content-formed">
+                                <div class="formed-groups-list" id="theater-formed-list">
+                                    <!-- Dynamic list of completed groups -->
+                                    <div class="empty-state-sidebar">
+                                        <i data-lucide="users"></i>
+                                        <p>No groups formed yet. Click "Draw Group" to start!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 5: RESULTS & EXPORT -->
+            <section class="content-view" id="view-results">
+                <!-- Results Info Banner -->
+                <div class="results-info-banner" id="results-info-banner">
+                    <div class="results-info-row">
+                        <span class="info-pill"><i data-lucide="building-2"></i> <span id="res-department"></span></span>
+                        <span class="info-pill"><i data-lucide="book-open"></i> <span id="res-subject"></span></span>
+                        <span class="info-pill"><i data-lucide="calendar"></i> Semester: <span id="res-semester"></span></span>
+                        <span class="info-pill"><i data-lucide="layers"></i> <span id="res-existing-group"></span></span>
+                        <span class="info-pill info-date"><i data-lucide="clock"></i> <span id="res-date"></span></span>
+                    </div>
+                </div>
+                <div class="results-header-container">
+                    <div>
+                        <h2 id="results-main-title">Groups Formed Successfully</h2>
+                        <p class="subtitle" id="results-meta-desc">50 Students divided into 10 groups of 5.</p>
+                    </div>
+                    <div class="export-actions">
+                        <button class="btn btn-secondary" id="btn-export-excel"><i data-lucide="file-spreadsheet" class="excel-color"></i> Export Excel</button>
+                        <button class="btn btn-primary" id="btn-export-pdf"><i data-lucide="file-text" class="pdf-color"></i> Export PDF Report</button>
+                        <button class="btn btn-danger" id="btn-reset-app"><i data-lucide="refresh-cw"></i> Start New</button>
+                    </div>
+                </div>
+
+                <!-- Drag-and-drop groups dashboard -->
+                <div class="groups-grid" id="results-groups-grid">
+                    <!-- Dynamic group cards loaded here -->
+                </div>
+                
+                <div class="drag-hint">
+                    <i data-lucide="info"></i>
+                    <span>Pro-Tip: You can drag and drop students between groups to manually adjust team balances.</span>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Audio synthesizer scripts are embedded in app.js using Web Audio API -->
+    <script src="app.js"></script>
+</body>
+</html>
